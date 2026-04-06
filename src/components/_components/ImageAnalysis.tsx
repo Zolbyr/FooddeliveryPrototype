@@ -26,12 +26,6 @@ export default function ImageAnalysis() {
     }
   };
 
-  // const handleReset = () => {
-  //   setSelectedFile(null);
-  //   setImagePreview(null);
-  //   setResult(null);
-  // };
-
   const handleGenerate = async () => {
     if (!imagePreview) return;
 

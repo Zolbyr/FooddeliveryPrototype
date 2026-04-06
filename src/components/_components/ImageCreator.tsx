@@ -1,83 +1,101 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function ImageCreator() {
   const [prompt, setPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [ingredient, setIngredients] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const handGenerate = async () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
-
-    setIsGenerating(true);
+    setIsLoading(true);
+    setError(null);
+    setGeneratedImage(null);
 
     try {
-      const res = await fetch("/api/generate-image", {
+      const res = await fetch("/api/image-creator", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
 
       const data = await res.json();
 
-      setIngredients(data.ingredients || []);
-      setGeneratedImage(data.image || null);
-    } catch (err) {
-      console.log("Error:", err);
+      if (!res.ok || data.error) {
+        setError(data.error || "Failed to generate image. Please try again.");
+      } else {
+        setGeneratedImage(data.image);
+      }
+    } catch {
+      setError("Network error. Please try again.");
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
   };
 
   const handleReset = () => {
     setPrompt("");
     setGeneratedImage(null);
-    setIngredients([]);
+    setError(null);
+    setIsLoading(false);
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="font-semibold text-black">Image creator</h2>
-      <p className="text-black text-sm">Image creator content here.</p>
-
-      {/* Prompt input */}
+    <div className="flex flex-col">
       <textarea
-        className="border p-2 w-full rounded-md"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Type prompt..."
+        placeholder="Describe a food or dish... e.g. Mongolian buuz on a wooden plate"
+        rows={3}
+        className="w-full border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
       />
 
-      {/* Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handGenerate}
-          disabled={isGenerating}
-          className="bg-black text-white px-4 py-2 rounded-md"
-        >
-          {isGenerating ? "Generating..." : "Generate"}
-        </button>
-
-        <button onClick={handleReset} className="border px-4 py-2 rounded-md">
+      <div className="flex justify-end gap-2 mt-2">
+        <Button variant="outline" onClick={handleReset}>
           Reset
-        </button>
+        </Button>
+        <Button
+          className="bg-zinc-800 hover:bg-zinc-700"
+          onClick={handleGenerate}
+          disabled={!prompt.trim() || isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            "Generate"
+          )}
+        </Button>
       </div>
 
-      {/* Generated image */}
-      {generatedImage && (
-        <img src={generatedImage} alt="generated" className="rounded-lg mt-4" />
+      {error && (
+        <div className="mt-4 p-4 bg-red-50 rounded-lg">
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
       )}
 
-      {/* Ingredients list */}
-      <div className="space-y-1">
-        {ingredient.map((item, index) => (
-          <div key={index}>{item}</div>
-        ))}
-      </div>
+      {generatedImage && (
+        <div className="mt-4">
+          <img
+            src={generatedImage}
+            alt="generated food"
+            className="w-64 rounded-lg block"
+          />
+          <a
+            href={generatedImage}
+            download="generated-food.png"
+            className="mt-2 inline-block text-sm text-zinc-600 underline"
+          >
+            Download image
+          </a>
+        </div>
+      )}
     </div>
   );
 }
